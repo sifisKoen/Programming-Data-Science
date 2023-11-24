@@ -332,18 +332,18 @@ class kNN:
         df_filtered = apply_column_filter(df=df, column_filter=self.column_filter)
 
         # self.imputation      - an imputation mapping (see Assignment 1) from df        
-        _, self.imputation = create_imputation(df=df)
-        df_imputed = apply_imputation(df=df, imputation=self.imputation)
+        _, self.imputation = create_imputation(df=df_filtered)
+        df_imputed = apply_imputation(df=df_filtered, imputation=self.imputation)
 
         # self.normalization   - a normalization mapping (see Assignment 1), using normalizationtype from the imputed df
-        _, self.normalization = create_normalization(df=df, normalizationtype=normalizationtype)
-        df_normalized = apply_normalization(df=df, normalization=self.normalization)
+        _, self.normalization = create_normalization(df=df_imputed, normalizationtype=normalizationtype)
+        df_normalized = apply_normalization(df=df_imputed, normalization=self.normalization)
 
 
-        if df.select_dtypes(include=['object', 'category']).shape[1] > 0:
+        if df_normalized.select_dtypes(include=['object', 'category']).shape[1] > 0:
             # self.one_hot         - a one-hot mapping (see Assignment 1)
-            _, self.one_hot = create_one_hot(df=df)
-            df_final = apply_one_hot(df=df, one_hot=self.one_hot)
+            _, self.one_hot = create_one_hot(df=df_normalized)
+            df_final = apply_one_hot(df=df_normalized, one_hot=self.one_hot)
         else:
             df_final = df_normalized
 
