@@ -326,35 +326,35 @@ class kNN:
 # The result of applying this function should be:
 #
     def fit(self, df: pd.DataFrame, normalizationtype: str = "minmax"):
-
-        # self.column_filter   - a column filter (see Assignment 1) from df
-        _,  self.column_filter = create_column_filter(df=df)
-        df_filtered = apply_column_filter(df=df, column_filter=self.column_filter)
-
-        # self.imputation      - an imputation mapping (see Assignment 1) from df        
-        _, self.imputation = create_imputation(df=df_filtered)
-        df_imputed = apply_imputation(df=df_filtered, imputation=self.imputation)
-
-        # self.normalization   - a normalization mapping (see Assignment 1), using normalizationtype from the imputed df
-        _, self.normalization = create_normalization(df=df_imputed, normalizationtype=normalizationtype)
-        df_normalized = apply_normalization(df=df_imputed, normalization=self.normalization)
-
-
-        if df_normalized.select_dtypes(include=['object', 'category']).shape[1] > 0:
-            # self.one_hot         - a one-hot mapping (see Assignment 1)
-            _, self.one_hot = create_one_hot(df=df_normalized)
-            df_final = apply_one_hot(df=df_normalized, one_hot=self.one_hot)
-        else:
-            df_final = df_normalized
-
-        # self.training_labels - a pandas series corresponding to the "CLASS" column, set to be of type "category" 
-        self.training_labels = df_final['CLASS'].astype('category')
-        # self.labels          - a list of the categories (class labels) of the previous series
-        self.labels = self.training_labels.cat.categories
-
-        # self.training_data   - the values (an ndarray) of the transformed dataframe, i.e., after employing imputation, 
-        # normalization, and possibly one-hot encoding, and also after removing the "CLASS" and "ID" columns
-        self.training_data = df_final.drop(columns=['CLASS', 'ID']).values
+      
+      # self.column_filter   - a column filter (see Assignment 1) from df
+      _,  self.column_filter = create_column_filter(df=df)
+      df_filtered = apply_column_filter(df=df, column_filter=self.column_filter)
+      
+      # self.imputation      - an imputation mapping (see Assignment 1) from df        
+      _, self.imputation = create_imputation(df=df_filtered)
+      df_imputed = apply_imputation(df=df_filtered, imputation=self.imputation)
+      
+      # self.normalization   - a normalization mapping (see Assignment 1), using normalizationtype from the imputed df
+      _, self.normalization = create_normalization(df=df_imputed, normalizationtype=normalizationtype)
+      df_normalized = apply_normalization(df=df_imputed, normalization=self.normalization)
+      
+      if df_normalized.select_dtypes(include=['object', 'category']).shape[1] > 0:
+          # self.one_hot         - a one-hot mapping (see Assignment 1)
+          _, self.one_hot = create_one_hot(df=df_normalized)
+          df_final = apply_one_hot(df=df_normalized, one_hot=self.one_hot)
+      else:
+          df_final = df_normalized
+      
+      # self.training_labels - a pandas series corresponding to the "CLASS" column, set to be of type "category" 
+      self.training_labels = df_final['CLASS'].astype('category')
+      
+      # self.labels          - a list of the categories (class labels) of the previous series
+      self.labels = self.training_labels.cat.categories
+      
+      # self.training_data   - the values (an ndarray) of the transformed dataframe, i.e., after employing imputation, 
+      # normalization, and possibly one-hot encoding, and also after removing the "CLASS" and "ID" columns
+      self.training_data = df_final.drop(columns=['CLASS', 'ID']).values
 
 
 # Note that the function does not return anything but just assigns values to the attributes of the object.
