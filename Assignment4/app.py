@@ -1,9 +1,7 @@
 import rdkit
 import numpy as np
 import pandas as pd
-from IPython.display import display
 import matplotlib.pyplot as plt
-from scipy import stats
 import seaborn as sn
 from rdkit.Chem import AllChem
 from rdkit.Chem import Descriptors
@@ -11,15 +9,10 @@ from rdkit.Chem import Fragments
 from rdkit.Chem import Lipinski
 from rdkit.Chem import rdMolDescriptors
 
-from sklearn.feature_selection import SelectKBest, chi2, RFECV, RFE
-from sklearn.ensemble import ExtraTreesClassifier
+from sklearn.feature_selection import SelectKBest, chi2
 from sklearn.pipeline import Pipeline
-from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
-from sklearn.feature_selection import SelectFromModel
-from sklearn.model_selection import StratifiedKFold
-from sklearn.metrics import accuracy_score
-from sklearn.ensemble import RandomForestClassifier
+import xgboost as xgb
 
 name = 'Assignment4/training_smiles.csv'
 
@@ -37,7 +30,7 @@ def extract_mole(df):
 # instead of making a function for each feature we utilize the lambda function
 
 def extract_features(df):
-    # 29 features extracted:
+    # 28 features extracted:
     # molecular descriptors:
     df['molecularWeight'] = df['mole'].apply(lambda x: Descriptors.MolWt(x))
     df['exactMolWt'] = df['mole'].apply(lambda x: Descriptors.ExactMolWt(x))
@@ -72,7 +65,6 @@ def extract_features(df):
     df['numValenceElectrons'] = df['mole'].apply(lambda x: Descriptors.NumValenceElectrons(x))
     df['num_H_acceptors'] = df['mole'].apply(lambda x: Lipinski.NumHAcceptors(x))
     df['num_H_donors'] = df['mole'].apply(lambda x: Lipinski.NumHDonors(x))
-    df['numSaturatedRings'] = df['mole'].apply(lambda x: rdMolDescriptors.CalcNumSaturatedRings(x))
     df['amideAmount'] = df['mole'].apply(lambda x: Fragments.fr_amide(x))
     df['benzeneAmount'] = df['mole'].apply(lambda x: Fragments.fr_benzene(x))
     df['esterAmount'] = df['mole'].apply(lambda x: Fragments.fr_ester(x))
@@ -87,9 +79,9 @@ def extract_features(df):
     return df
 
 def feature_selection(df):
-    print(pick_top_features(df))
+    print(chi_squared(df))
 
-def pick_top_features(df):
+def chi_squared(df):
     df1 = df.copy()
     y = df1['ACTIVE']
     X = df1.drop('ACTIVE', axis=1)
@@ -105,36 +97,26 @@ def pick_top_features(df):
     # print features with the top 10 scores
     return featureScores.nlargest(10, 'Score')
 
-# def rfe_selection(df):
-#     df2 = extract_features(df)
-#     df1 = df2.copy()
-#     y = df1['ACTIVE']
-#     X = df1.drop('ACTIVE', axis=1)
+def xgb_selection(df):
+    df2 = extract_features(df)
+    df1 = df2.copy()
+    
+    y = df1['ACTIVE']
+    X = df1.drop('ACTIVE', axis=1)
 
-#     clf = RandomForestClassifier()
+    model = Pipeline(steps=[
+        ('scaler', StandardScaler()),
+        ('extreme', xgb.XGBClassifier())
+    ])
 
-#     # Initialize RFE with the classifier and the desired number of features to select (e.g., 10)
-#     rfe = RFE(clf, n_features_to_select=10)
+    model.fit(X, y)
+    feat_importances = pd.Series(model.named_steps['extreme'].feature_importances_, index=X.columns)
+    top_10_features = feat_importances.nlargest(10)
 
-#     # Fit RFE on the training data
-#     rfe.fit(X, y)
-
-#     # Get the selected features
-#     selected_features = X.columns[rfe.support_]
-
-#     # Train a model using only the selected features
-#     clf.fit(X[selected_features], y)
-
-#     # Make predictions on the test set
-#     y_pred = clf.predict(X[selected_features])
-
-#     # Evaluate the accuracy of the model
-#     accuracy = accuracy_score(y, y_pred)
-#     print(f"Selected Features: {selected_features}")
-#     print(f"Accuracy on Test Set: {accuracy}")
+    return pd.DataFrame({'Feature': top_10_features.index, 'Importance': top_10_features.values})
 
 def extract_top_features(df):
-    # RESULT FROM pick_top_features:
+    # Results from chi_squared:
     # 1. morganFingerprint
     df['morganFingerprint'] = df['mole'].apply(lambda x: AllChem.GetMorganFingerprintAsBitVect(x,2,nBits=124))
     ## morgan fingerprint must be represented as a string
@@ -157,10 +139,24 @@ def extract_top_features(df):
     df['Ar_N'] = df['mole'].apply(lambda x: Fragments.fr_Ar_N(x))
     # 10. numHeavyAtoms
     df['numHeavyAtoms'] = df['mole'].apply(lambda x: x.GetNumHeavyAtoms())
-        
+
+    # Additional results from xgb_selection
+    # 11. COO
+    df['COO'] = df['mole'].apply(lambda x: Fragments.fr_COO(x))
+    # 12. esterAmount
+    df['esterAmount'] = df['mole'].apply(lambda x: Fragments.fr_ester(x))
+    # 13. numSaturatedRings
+    df['numSaturatedRings'] = df['mole'].apply(lambda x: rdMolDescriptors.CalcNumSaturatedRings(x))
+    # 14. nitroAmount
+    df['nitroAmount'] = df['mole'].apply(lambda x: Fragments.fr_nitro(x))
+    # 15. nitroArom
+    df['nitroArom'] = df['mole'].apply(lambda x: Fragments.fr_nitro_arom(x))
+    # 16. HDonors
+    df['HDonors'] = df['mole'].apply(lambda x: Descriptors.NumHDonors(x))
+
     df.drop('mole', axis=1, inplace=True)
     clean_data(df)
-    # df.to_csv('Assignment4/features.csv')
+    df.to_csv('Assignment4/final-features.csv')
 
     return df
 
@@ -174,6 +170,7 @@ def clean_data(df):
 
 def data_analysis(df):
     df1 = df.copy()
+    df1.drop('ACTIVE', axis=1)
     # find correlation
     corr_matrix = df1.corr()
     sn.heatmap(corr_matrix, annot=True)
@@ -182,16 +179,17 @@ def data_analysis(df):
     # distribution for active and inactive 
     numY, numN = df.ACTIVE.value_counts()
     print(numY, numN)
-    df.ACTIVE.value_counts().plot(kind='pie',autopct='%1.0f%%', colors=['royalblue','red'])
-    plt.xlabel("ACTIVE")
-    plt.ylabel("INACTIVE")
+    df.ACTIVE.value_counts().plot(kind='pie',autopct='%1.0f%%', colors=['red','green'])
+    plt.xlabel("ACTIVE = 1784")
+    plt.ylabel("INACTIVE = 151446")
     plt.show()
 
 df = load_data()
 extract_mole(df)
 # extract_features(df)
-extract_top_features(df) #returns the top 10 features
-# print(extract_top_features(df))
+# extract_top_features(df) #returns the top 16 features
+print(extract_top_features(df))
 # rfe_selection(df)
 # data_analysis(df)
 # feature_selection(df)
+# print(xgb_selection(df))
