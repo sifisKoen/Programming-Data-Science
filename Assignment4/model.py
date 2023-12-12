@@ -3,6 +3,7 @@ from sklearn.discriminant_analysis import StandardScaler
 from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import train_test_split
 from sklearn.naive_bayes import GaussianNB
 from sklearn.neighbors import KNeighborsClassifier
@@ -48,16 +49,30 @@ def transform_pipeline(Xy_train):
 
     return preprocessor
 
-def train_models(Xy_train, preprocessor):
+def train_and_evaluate_models(Xy_train, Xy_valid, preprocessor):
     X_train, y_train = Xy_train
+    X_valid, y_valid = Xy_valid
     # Loop through each model in models_and_auc_scores and train it
     for model_name, (model, auc_score) in models_and_auc_scores.items():
         model_pipeline = Pipeline(steps=[
             ('preprocessor', preprocessor), 
             (model_name, model)
         ])
-        model_pipeline.fit(preprocessor.fit_transform(X_train), y_train)
+        # Fit each model
+        model_pipeline.fit(X_train, y_train)
 
+        # Make predictions on the validation set
+        y_pred_prob = model.predict_proba(X_valid)[:, 1]
+
+        # Calculate AUC score for the model
+        auc = roc_auc_score(y_valid, y_pred_prob)
+
+        # Update the AUC score for the model in the dictionary
+        models_and_auc_scores[model_name][1] = auc
+
+        print ("Model:", model_name, "AUC score:", auc)
+    print("Best model:", max(models_and_auc_scores, key=lambda x: models_and_auc_scores[x][1]))
+    
 def evaluate_models(Xy_train, Xy_valid):
     X_train, y_train = Xy_train
     X_valid, y_valid = Xy_valid
@@ -73,3 +88,17 @@ def evaluate_models(Xy_train, Xy_valid):
     sorted_models_and_auc_scores = sorted(models_and_auc_scores.items(), key=lambda x: x[1][1], reverse=True)
     # print the sorted dictionary
     print(sorted_models_and_auc_scores)
+
+def main():
+    # Split data
+    # Transform data
+    # Train models
+    # Evaluate models
+    # Predict with best model on test set
+
+    #TODO: fix imbalance dataset
+    return 0
+
+if __name__ == "__main__":
+    main()
+
