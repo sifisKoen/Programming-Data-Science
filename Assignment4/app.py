@@ -14,10 +14,10 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 import xgboost as xgb
 
-name = 'Assignment4/training_smiles.csv'
+name = 'training_smiles.csv'
 
-def load_data():
-    df = pd.read_csv(name, index_col=0)
+def load_data(filename):
+    df = pd.read_csv(filename, index_col=0)
     return df
 
 def extract_mole(df):
@@ -156,7 +156,7 @@ def extract_top_features(df):
 
     df.drop('mole', axis=1, inplace=True)
     clean_data(df)
-    df.to_csv('Assignment4/final-features.csv')
+    df.to_csv('final-features.csv')
 
     return df
 
@@ -184,7 +184,7 @@ def data_analysis(df):
     plt.ylabel("INACTIVE = 151446")
     plt.show()
 
-df = load_data()
+df = load_data(name)
 extract_mole(df)
 # extract_features(df)
 # extract_top_features(df) #returns the top 16 features
