@@ -10,7 +10,8 @@ from rdkit.Chem import Lipinski
 from rdkit.Chem import rdMolDescriptors
 
 from sklearn.feature_selection import SelectKBest, chi2
-from sklearn.pipeline import Pipeline
+# from sklearn.pipeline import Pipeline
+from imblearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 import xgboost as xgb
 
@@ -119,8 +120,12 @@ def extract_top_features(df):
     # Results from chi_squared:
     # 1. morganFingerprint
     df['morganFingerprint'] = df['mole'].apply(lambda x: AllChem.GetMorganFingerprintAsBitVect(x,2,nBits=124))
+    # df = pd.concat([df, df['morganFingerprint'].apply(fingerprint_to_onehot)], axis=1)
+
     ## morgan fingerprint must be represented as a string
     df['morganFingerprint'] = df['morganFingerprint'].apply(lambda x: x.ToBitString())
+    # ## one hot encoding
+    # df['morganFingerprint'] = df['morganFingerprint'].str.split('', expand=True)
     # 2. molecularWeight
     df['molecularWeight'] = df['mole'].apply(lambda x: Descriptors.MolWt(x))
     # 3. exactMolWt
@@ -160,6 +165,19 @@ def extract_top_features(df):
 
     return df
 
+# def fingerprint_to_onehot(fp):
+#     arr = np.zeros((1,))
+#     AllChem.DataStructs.ConvertToNumpyArray(fp, arr)
+#     return pd.Series(arr, index=[f'bit_{i}' for i in range(124)])
+
+def fingerprint_to_onehot(fp):
+    arr = list(fp.ToBitString())
+    return pd.Series([int(bit) for bit in arr])
+
+# def fingerprint_to_onehot(fp):
+#     arr = list(fp.ToBitString())
+#     return pd.Series([int(bit) for bit in arr], index=[f'bit_{i}' for i in range(124)])
+
 
 def clean_data(df):
     if 'ACTIVE' in df.columns:
@@ -189,7 +207,8 @@ df = load_data(name)
 extract_mole(df)
 # extract_features(df)
 extract_top_features(df) #returns the top 16 features
+# print(type(df['morganFingerprint']))
 # print(extract_top_features(df))
-data_analysis(df)
+# data_analysis(df)
 # feature_selection(df)
 # print(xgb_selection(df))
