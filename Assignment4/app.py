@@ -187,9 +187,8 @@ def data_analysis(df):
 df = load_data(name)
 extract_mole(df)
 # extract_features(df)
-# extract_top_features(df) #returns the top 16 features
-print(extract_top_features(df))
-# rfe_selection(df)
-# data_analysis(df)
+extract_top_features(df) #returns the top 16 features
+# print(extract_top_features(df))
+data_analysis(df)
 # feature_selection(df)
 # print(xgb_selection(df))
