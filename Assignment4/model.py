@@ -170,6 +170,7 @@ def test_best_model(X_test, y_test, best_estimator):
     print(f'F1 Score: {f1}')
 
 def predict_activity_and_save(model, features, X_test, y_test):
+    print("Model:", model)
     print("Predicting activity on test set...")
 
     # Make an estimate of the AUC score of the model
@@ -210,7 +211,7 @@ def main():
     best_parameters, best_estimator = tune_best_model(X_valid, y_valid, preprocessor, best_baseline_model, best_model_name)
 
     # Test best model with optimal hyperparameters with test data
-    test_best_model(X_test, y_test, preprocessor, best_parameters, best_estimator)
+    test_best_model(X_test, y_test, best_estimator)
 
     ##### PREDICT ACTIVITY #####
 
@@ -222,7 +223,7 @@ def main():
 
     _, X_test_predict, _, y_test_predict = train_test_split(X_train, y_train, test_size=0.2, random_state=42)
 
-    predict_activity_and_save(best_estimator, final_features_test, preprocessor, X_test_predict, y_test_predict)
+    predict_activity_and_save(best_estimator, final_features_test, X_test_predict, y_test_predict)
 
 if __name__ == "__main__":
     main()
