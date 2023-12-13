@@ -1,5 +1,3 @@
-from sklearn import svm
-from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.compose import ColumnTransformer
 from sklearn.decomposition import PCA
 from sklearn.discriminant_analysis import StandardScaler
@@ -7,13 +5,12 @@ from sklearn.ensemble import ExtraTreesClassifier, GradientBoostingClassifier, R
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import f1_score, precision_score, recall_score, roc_auc_score, accuracy_score
-from sklearn.model_selection import GridSearchCV, StratifiedKFold, cross_val_score, train_test_split, RandomizedSearchCV
+from sklearn.model_selection import GridSearchCV, StratifiedKFold, cross_val_score, train_test_split
 from sklearn.naive_bayes import GaussianNB
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OrdinalEncoder
 from sklearn.tree import DecisionTreeClassifier
-from sklearn.utils import shuffle
 from app import *
 from imblearn.over_sampling import SMOTE
 
@@ -148,85 +145,48 @@ def tune_best_model(X_valid, y_valid, preprocessor, best_model, best_model_name)
 
     return best_parameters, best_estimator
 
-def test_best_model(X_test, y_test, preprocessor, best_parameters, best_estimator):
-    threshold = 0.5
+def test_best_model(X_test, y_test, best_estimator):
     print("Testing best model...")
+    threshold = 0.5
     best_model = best_estimator
     y_pred_prob = best_model.predict_proba(X_test)[:, 1]
+
+    # Transform to binary by using a threshold of 0.5
     y_pred = (y_pred_prob >= threshold).astype(int)
+
     auc = roc_auc_score(y_test, y_pred)
-    print(f'AUC-ROC Score: {auc}')
     accuracy = accuracy_score(y_test, y_pred)
-    print(f'Accuracy: {accuracy}')
     precision = precision_score(y_test, y_pred)
-    print("Precision:", precision)
     recall = recall_score(y_test, y_pred)
-    print(f'Recall: {recall}')
     f1 = f1_score(y_test, y_pred)
+
+    print(f'AUC-ROC Score: {auc}')
+    print(f'Accuracy: {accuracy}')
+    print("Precision:", precision)
+    print(f'Recall: {recall}')
     print(f'F1 Score: {f1}')
 
-# def test_best_model(X_test, y_test, preprocessor, best_parameters, best_estimator, num_runs=10):
-#     print("Testing best model...")
+def predict_activity_and_save(model, features, X_test, y_test):
+    print("Predicting activity on test set...")
 
-#     best_model = best_estimator
-#     auc_scores = []
-#     accuracy_scores = []
-#     precision_scores = []
-#     recall_scores = []
-#     f1_scores = []
+    # Make an estimate of the AUC score of the model
+    auc = cross_val_score(model, X_test, y_test, cv=StratifiedKFold(n_splits=5, shuffle=True, random_state=(42)), scoring='roc_auc').mean()
+    print(f"Estimated AUC score: {auc}")
 
-#     for run in range(num_runs):
-#         print(f"Run {run + 1}/{num_runs}")
+    # Make predictions on the actual test dataset
+    y_pred_prob = model.predict_proba(features)
 
-#         # Shuffle the data for each run
-#         X_test_shuffled, y_test_shuffled = shuffle(X_test, y_test, random_state=run)
-
-#         print("making pipeline...")
-#         # Modify the pipeline if necessary
-#         test_pipeline = Pipeline([
-#             ('preprocessor', preprocessor),
-#             ('scaler', StandardScaler()),
-#             ('best_model', GaussianNB().set_params(**best_parameters[1]))
-#         ])
-
-#         print("evaluating model...")
-#         # Evaluate the model
-#         print("fetching auc score...")
-#         auc = np.mean(cross_val_score(test_pipeline, X_test_shuffled, y_test_shuffled, cv=StratifiedKFold(n_splits=5, shuffle=True),
-#                                     scoring='roc_auc', n_jobs=-1))
-#         print("fetching accuracy score...")
-#         accuracy = np.mean(cross_val_score(test_pipeline, X_test_shuffled, y_test_shuffled, cv=StratifiedKFold(n_splits=5, shuffle=True),
-#                                         scoring='accuracy', n_jobs=-1))
-#         print("fetching precision score...")
-#         precision = np.mean(cross_val_score(test_pipeline, X_test_shuffled, y_test_shuffled, cv=StratifiedKFold(n_splits=5, shuffle=True),
-#                                         scoring='precision', n_jobs=-1))
-#         print("fetching recall score...")
-#         recall = np.mean(cross_val_score(test_pipeline, X_test_shuffled, y_test_shuffled, cv=StratifiedKFold(n_splits=5, shuffle=True),
-#                                         scoring='recall', n_jobs=-1))
-#         print("fetching f1 score...")
-#         f1 = np.mean(cross_val_score(test_pipeline, X_test_shuffled, y_test_shuffled, cv=StratifiedKFold(n_splits=5, shuffle=True),
-#                                     scoring='f1', n_jobs=-1))
-
-#         auc_scores.append(auc)
-#         accuracy_scores.append(accuracy)
-#         precision_scores.append(precision)
-#         recall_scores.append(recall)
-#         f1_scores.append(f1)
-
-#     # Report average scores
-#     print(f"Avg AUC Score: {np.mean(auc_scores)}")
-#     print(f"Avg Accuracy: {np.mean(accuracy_scores)}")
-#     print(f"Avg Precision: {np.mean(precision_scores)}")
-#     print(f"Avg Recall: {np.mean(recall_scores)}")
-#     print(f"Avg F1 Score: {np.mean(f1_scores)}")
-
-def predict_activity(model, Xy_test):
-    print("Predicting activity...")
-
-    return None
+    # Save the predicted probabilities to the output file, with the first line being the estimated AUC score
+    filename = "15.txt"
+    with open(filename, "w") as file:
+        file.write(f"{auc}\n")
+        for pred in y_pred_prob:
+            file.write(f"{pred[1]}\n")
+    print("Predicted probabilities has been saved to", filename)
 
 def main():
     df = load_data("training_smiles.csv")
+
     mole = extract_mole(df)
     #all_features = extract_features(df)
     final_features = extract_top_features(df)
@@ -249,16 +209,17 @@ def main():
     # Test best model with optimal hyperparameters with test data
     test_best_model(X_test, y_test, preprocessor, best_parameters, best_estimator)
 
-    #DONE: 
-    # Split data
-    # Transform data
-    # Train models
-    # Evaluate models
-    # Tune model hyperparameters
+    ##### PREDICT ACTIVITY #####
 
-    #TODO: 
-    # fix imbalanced dataset
-    # Predict with best model on test set
+    df_test = (load_data("test_smiles.csv"))
+
+    mole_test = extract_mole(df_test)
+    final_features_test = extract_top_features(df_test)
+    print("Shape:",final_features_test.shape)
+
+    _, X_test_predict, _, y_test_predict = train_test_split(X_train, y_train, test_size=0.2, random_state=42)
+
+    predict_activity_and_save(best_estimator, final_features_test, preprocessor, X_test_predict, y_test_predict)
 
 if __name__ == "__main__":
     main()

@@ -162,8 +162,9 @@ def extract_top_features(df):
 
 
 def clean_data(df):
-    last = df.pop('ACTIVE')
-    df['ACTIVE'] = last
+    if 'ACTIVE' in df.columns:
+        last = df.pop('ACTIVE')
+        df['ACTIVE'] = last
     df.drop_duplicates()
     df.isnull()
     return df
@@ -174,7 +175,7 @@ def data_analysis(df):
     # find correlation
     corr_matrix = df1.corr()
     sn.heatmap(corr_matrix, annot=True)
-    plt.show()
+    #plt.show()
 
     # distribution for active and inactive 
     numY, numN = df.ACTIVE.value_counts()
@@ -182,7 +183,7 @@ def data_analysis(df):
     df.ACTIVE.value_counts().plot(kind='pie',autopct='%1.0f%%', colors=['red','green'])
     plt.xlabel("ACTIVE = 1784")
     plt.ylabel("INACTIVE = 151446")
-    plt.show()
+    #plt.show()
 
 df = load_data(name)
 extract_mole(df)
