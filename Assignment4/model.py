@@ -10,7 +10,8 @@ from sklearn.metrics import f1_score, precision_score, recall_score, roc_auc_sco
 from sklearn.model_selection import GridSearchCV, StratifiedKFold, cross_val_score, train_test_split, RandomizedSearchCV
 from sklearn.naive_bayes import GaussianNB
 from sklearn.neighbors import KNeighborsClassifier
-from sklearn.pipeline import Pipeline
+# from sklearn.pipeline import Pipeline
+from imblearn.pipeline import Pipeline
 from sklearn.preprocessing import OrdinalEncoder
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.utils import shuffle
@@ -64,6 +65,7 @@ def train_and_evaluate_models(X_train, X_valid, y_train, y_valid, preprocessor):
     for model_name, (model, _) in models_and_auc_scores.items():
         print(f"Making pipeline for {model_name}...")
         model_pipeline = Pipeline(steps=[
+            ('smote', SMOTE(n_jobs=-1)),
             ('preprocessor', preprocessor),
             ('scaler', StandardScaler()),
             (model_name, model)
@@ -129,6 +131,7 @@ def tune_best_model(X_valid, y_valid, preprocessor, best_model, best_model_name)
 
     # Create a pipeline with the preprocessor, scaling of data and the best model
     tuning_pipeline = Pipeline(steps=[
+        ('smote', SMOTE(n_jobs=-1)),
         ('preprocessor', preprocessor),
         ('scaler', StandardScaler()),
         ('best_model', best_model)
