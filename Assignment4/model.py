@@ -56,8 +56,8 @@ def transform_pipeline(X_train):
     return preprocessor
 
 def train_and_evaluate_models(X_train, X_valid, y_train, y_valid, preprocessor):
+    best_model = None
     print("Training and evaluating models...")
-
     # Loop through each model in models_and_auc_scores and train it
     for model_name, (model, _) in models_and_auc_scores.items():
         print(f"Making pipeline for {model_name}...")
@@ -85,8 +85,16 @@ def train_and_evaluate_models(X_train, X_valid, y_train, y_valid, preprocessor):
         models_and_auc_scores[model_name][1] = auc
 
         print ("Model:", model_name, "- AUC score:", auc)
+
+        # Update best model variable if the current model is better than the current best model
+        if best_model == None or auc > models_and_auc_scores[best_model][1]:
+            best_model = model_name
+
     print("Best model:", max(models_and_auc_scores, key=lambda x: models_and_auc_scores[x][1]))
     print("AUC scores:", models_and_auc_scores)
+    
+    # Return best model
+    return models_and_auc_scores[best_model][0]
 
 def tune_best_model(Xy_train, preprocessor):
     print("Tuning best model...")
@@ -114,7 +122,7 @@ def main():
     # Train and evaluate models
     X_train, X_valid, y_train, y_valid = split(clean_df)
     preprocessor = transform_pipeline(X_train)
-    train_and_evaluate_models(X_train, X_valid, y_train, y_valid, preprocessor)
+    best_baseline_model = train_and_evaluate_models(X_train, X_valid, y_train, y_valid, preprocessor)
 
     #DONE: 
     # Split data
